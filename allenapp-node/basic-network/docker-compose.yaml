@@ -1,0 +1,284 @@
+# Copyright IBM Corp. All Rights Reserved.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
+version: '2'
+
+networks:
+  hkunetwork:
+
+services:
+
+  caA.hku.com:
+    image: hyperledger/fabric-ca
+    environment:
+      - FABRIC_CA_HOME=/etc/hyperledger/fabric-ca-server
+      - FABRIC_CA_SERVER_CA_NAME=caA.hku.com
+      - FABRIC_CA_SERVER_CA_CERTFILE=/etc/hyperledger/fabric-ca-server-config/ca.hallA.hku.com-cert.pem
+      - FABRIC_CA_SERVER_CA_KEYFILE=/etc/hyperledger/fabric-ca-server-config/6f5784aacbda48559851980c733bfaec58dd4d48ce0aadb7b58a9ad02c2ef65e_sk
+    ports:
+      - "7054:7054"
+    command: sh -c 'fabric-ca-server start -b admin:adminpw -d'
+    volumes:
+      - ./crypto-config/peerOrganizations/hallA.hku.com/ca/:/etc/hyperledger/fabric-ca-server-config
+    container_name: caA.hku.com
+    networks:
+      - hkunetwork
+
+  caB.hku.com:
+    image: hyperledger/fabric-ca
+    environment:
+      - FABRIC_CA_HOME=/etc/hyperledger/fabric-ca-server
+      - FABRIC_CA_SERVER_CA_NAME=caB.hku.com
+      - FABRIC_CA_SERVER_CA_CERTFILE=/etc/hyperledger/fabric-ca-server-config/ca.hallB.hku.com-cert.pem
+      - FABRIC_CA_SERVER_CA_KEYFILE=/etc/hyperledger/fabric-ca-server-config/a3580ca5103a6b4a314c65467c7429246ea74f4eb54fe2b807086b7e4a217db6_sk
+    ports:
+      - "8054:7054"
+    command: sh -c 'fabric-ca-server start -b admin:adminpw -d'
+    volumes:
+      - ./crypto-config/peerOrganizations/hallB.hku.com/ca/:/etc/hyperledger/fabric-ca-server-config
+    container_name: caB.hku.com
+    networks:
+      - hkunetwork
+
+  caA.cuhk.com:
+    image: hyperledger/fabric-ca
+    environment:
+      - FABRIC_CA_HOME=/etc/hyperledger/fabric-ca-server
+      - FABRIC_CA_SERVER_CA_NAME=caA.cuhk.com
+      - FABRIC_CA_SERVER_CA_CERTFILE=/etc/hyperledger/fabric-ca-server-config/ca.clubA.cuhk.com-cert.pem
+      - FABRIC_CA_SERVER_CA_KEYFILE=/etc/hyperledger/fabric-ca-server-config/26d45e9cc23bb0e7489261bd65717cf83c48d64a737e45a443899e87988728b4_sk
+    ports:
+      - "9054:7054"
+    command: sh -c 'fabric-ca-server start -b admin:adminpw -d'
+    volumes:
+      - ./crypto-config/peerOrganizations/clubA.cuhk.com/ca/:/etc/hyperledger/fabric-ca-server-config
+    container_name: caA.cuhk.com
+    networks:
+      - hkunetwork
+
+  caB.cuhk.com:
+    image: hyperledger/fabric-ca
+    environment:
+      - FABRIC_CA_HOME=/etc/hyperledger/fabric-ca-server
+      - FABRIC_CA_SERVER_CA_NAME=caB.cuhk.com
+      - FABRIC_CA_SERVER_CA_CERTFILE=/etc/hyperledger/fabric-ca-server-config/ca.clubB.cuhk.com-cert.pem
+      - FABRIC_CA_SERVER_CA_KEYFILE=/etc/hyperledger/fabric-ca-server-config/fdd1ced37b0ff8744857307baa66bfe91692124d8c838f9b68e66bbc14e71206_sk
+    ports:
+      - "10054:7054"
+    command: sh -c 'fabric-ca-server start -b admin:adminpw -d'
+    volumes:
+      - ./crypto-config/peerOrganizations/clubB.cuhk.com/ca/:/etc/hyperledger/fabric-ca-server-config
+    container_name: caB.cuhk.com
+    networks:
+      - hkunetwork
+
+  orderer.hku.com:
+    container_name: orderer.hku.com
+    image: hyperledger/fabric-orderer
+    extends:
+      file:  base/docker-compose-base.yaml
+      service: orderer.hku.com
+    networks:
+      - hkunetwork
+
+
+# HKU
+  peer0.hallA.hku.com:
+    container_name: peer0.hallA.hku.com
+    extends:
+      file:  base/docker-compose-base.yaml
+      service: peer0.hallA.hku.com
+    depends_on:
+      - couchdbA0
+    networks:
+      - hkunetwork
+
+  peer1.hallA.hku.com:
+    container_name: peer1.hallA.hku.com
+    extends:
+      file:  base/docker-compose-base.yaml
+      service: peer1.hallA.hku.com
+    depends_on:
+      - couchdbA1
+    networks:
+      - hkunetwork
+
+  peer0.hallB.hku.com:
+    container_name: peer0.hallB.hku.com
+    extends:
+      file:  base/docker-compose-base.yaml
+      service: peer0.hallB.hku.com
+    depends_on:
+      - couchdbB0
+    networks:
+      - hkunetwork
+
+  peer1.hallB.hku.com:
+    container_name: peer1.hallB.hku.com
+    extends:
+      file:  base/docker-compose-base.yaml
+      service: peer1.hallB.hku.com
+    depends_on:
+      - couchdbB1
+    networks:
+      - hkunetwork
+
+# CUHK
+  peer0.clubA.cuhk.com:
+    container_name: peer0.clubA.cuhk.com
+    extends:
+      file:  base/docker-compose-base.yaml
+      service: peer0.clubA.cuhk.com
+    depends_on:
+      - couchdbA0cu
+    networks:
+      - hkunetwork
+
+  peer0.clubB.cuhk.com:
+    container_name: peer0.clubB.cuhk.com
+    extends:
+      file:  base/docker-compose-base.yaml
+      service: peer0.clubB.cuhk.com
+    depends_on:
+      - couchdbB0cu
+    networks:
+      - hkunetwork
+
+
+  couchdbA0:
+    container_name: couchdbA0
+    image: hyperledger/fabric-couchdb
+    # Populate the COUCHDB_USER and COUCHDB_PASSWORD to set an admin user and password
+    # for CouchDB.  This will prevent CouchDB from operating in an "Admin Party" mode.
+    environment:
+      - COUCHDB_USER=
+      - COUCHDB_PASSWORD=
+    # Comment/Uncomment the port mapping if you want to hide/expose the CouchDB service,
+    # for example map it to utilize Fauxton User Interface in dev environments.
+    ports:
+      - "5984:5984"
+    networks:
+      - hkunetwork
+
+  couchdbA1:
+    container_name: couchdbA1
+    image: hyperledger/fabric-couchdb
+    # Populate the COUCHDB_USER and COUCHDB_PASSWORD to set an admin user and password
+    # for CouchDB.  This will prevent CouchDB from operating in an "Admin Party" mode.
+    environment:
+      - COUCHDB_USER=
+      - COUCHDB_PASSWORD=
+    # Comment/Uncomment the port mapping if you want to hide/expose the CouchDB service,
+    # for example map it to utilize Fauxton User Interface in dev environments.
+    ports:
+      - "6984:5984"
+    networks:
+      - hkunetwork
+
+  couchdbB0:
+    container_name: couchdbB0
+    image: hyperledger/fabric-couchdb
+    # Populate the COUCHDB_USER and COUCHDB_PASSWORD to set an admin user and password
+    # for CouchDB.  This will prevent CouchDB from operating in an "Admin Party" mode.
+    environment:
+      - COUCHDB_USER=
+      - COUCHDB_PASSWORD=
+    # Comment/Uncomment the port mapping if you want to hide/expose the CouchDB service,
+    # for example map it to utilize Fauxton User Interface in dev environments.
+    ports:
+      - "7984:5984"
+    networks:
+      - hkunetwork
+
+  couchdbB1:
+    container_name: couchdbB1
+    image: hyperledger/fabric-couchdb
+    # Populate the COUCHDB_USER and COUCHDB_PASSWORD to set an admin user and password
+    # for CouchDB.  This will prevent CouchDB from operating in an "Admin Party" mode.
+    environment:
+      - COUCHDB_USER=
+      - COUCHDB_PASSWORD=
+    # Comment/Uncomment the port mapping if you want to hide/expose the CouchDB service,
+    # for example map it to utilize Fauxton User Interface in dev environments.
+    ports:
+      - "8984:5984"
+    networks:
+      - hkunetwork
+
+  couchdbA0cu:
+    container_name: couchdbA0cu
+    image: hyperledger/fabric-couchdb
+    # Populate the COUCHDB_USER and COUCHDB_PASSWORD to set an admin user and password
+    # for CouchDB.  This will prevent CouchDB from operating in an "Admin Party" mode.
+    environment:
+      - COUCHDB_USER=
+      - COUCHDB_PASSWORD=
+    # Comment/Uncomment the port mapping if you want to hide/expose the CouchDB service,
+    # for example map it to utilize Fauxton User Interface in dev environments.
+    ports:
+      - "9984:5984"
+    networks:
+      - hkunetwork
+
+  couchdbB0cu:
+    container_name: couchdbB0cu
+    image: hyperledger/fabric-couchdb
+    # Populate the COUCHDB_USER and COUCHDB_PASSWORD to set an admin user and password
+    # for CouchDB.  This will prevent CouchDB from operating in an "Admin Party" mode.
+    environment:
+      - COUCHDB_USER=
+      - COUCHDB_PASSWORD=
+    # Comment/Uncomment the port mapping if you want to hide/expose the CouchDB service,
+    # for example map it to utilize Fauxton User Interface in dev environments.
+    ports:
+      - "10984:5984"
+    networks:
+      - hkunetwork
+
+  cli:
+    container_name: cli
+    image: hyperledger/fabric-tools
+    tty: true
+    environment:
+      - GOPATH=/opt/gopath
+      - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
+      - CORE_LOGGING_LEVEL=DEBUG
+      - CORE_PEER_ID=cli
+      - CORE_PEER_ADDRESS=peer0.hallA.hku.com:7051
+      - CORE_PEER_LOCALMSPID=HallAMSP
+      - CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/hallA.hku.com/users/Admin@hallA.hku.com/msp
+      #- CORE_PEER_TLS_ENABLED=true
+      #- CORE_PEER_TLS_CERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/hallA.hku.com/peers/peer0.hallA.hku.com/tls/server.crt
+      #- CORE_PEER_TLS_KEY_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/hallA.hku.com/peers/peer0.hallA.hku.com/tls/server.key
+      #- CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/hallA.hku.com/peers/peer0.hallA.hku.com/tls/ca.crt
+
+      - CORE_CHAINCODE_KEEPALIVE=10
+      - COMPOSE_PROJECT_NAME=hkunetwork
+    working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
+    volumes:
+        - /var/run/:/host/var/run/
+        - ./../chaincode/:/opt/gopath/src/github.com/chaincode
+        - ./crypto-config:/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/
+        - ./channel-artifacts:/opt/gopath/src/github.com/hyperledger/fabric/peer/channel-artifacts
+    depends_on:
+      - caA.hku.com
+      - caB.hku.com
+      - caA.cuhk.com
+      - caB.cuhk.com
+      - orderer.hku.com
+      - peer0.hallA.hku.com
+      - peer1.hallA.hku.com
+      - peer0.hallB.hku.com
+      - peer1.hallB.hku.com
+      - peer0.clubA.cuhk.com
+      - peer0.clubB.cuhk.com
+      - couchdbA0
+      - couchdbA1
+      - couchdbB0
+      - couchdbB1
+      - couchdbA0cu
+      - couchdbB0cu
+    networks:
+      - hkunetwork

@@ -1,0 +1,304 @@
+# Copyright IBM Corp. All Rights Reserved.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
+version: '2'
+
+services:
+
+  orderer.hku.com:
+    container_name: orderer.hku.com
+    image: hyperledger/fabric-orderer
+    environment:
+      - ORDERER_GENERAL_LOGLEVEL=debug
+      - ORDERER_GENERAL_LISTENADDRESS=0.0.0.0
+      - ORDERER_GENERAL_GENESISMETHOD=file
+      - ORDERER_GENERAL_GENESISFILE=/var/hyperledger/orderer/orderer.genesis.block
+      - ORDERER_GENERAL_LOCALMSPID=OrdererMSP
+      - ORDERER_GENERAL_LOCALMSPDIR=/var/hyperledger/orderer/msp
+      # enabled TLS
+      - ORDERER_GENERAL_TLS_ENABLED=false
+      #- ORDERER_GENERAL_TLS_PRIVATEKEY=/var/hyperledger/orderer/tls/server.key
+      #- ORDERER_GENERAL_TLS_CERTIFICATE=/var/hyperledger/orderer/tls/server.crt
+      #- ORDERER_GENERAL_TLS_ROOTCAS=[/var/hyperledger/orderer/tls/ca.crt]
+    working_dir: /opt/gopath/src/github.com/hyperledger/fabric
+    command: orderer
+    volumes:
+    - ./channel-artifacts/genesis.block:/var/hyperledger/orderer/orderer.genesis.block
+    - ./crypto-config/ordererOrganizations/hku.com/orderers/orderer.hku.com/msp:/var/hyperledger/orderer/msp
+    #- ./crypto-config/ordererOrganizations/hku.com/orderers/orderer.hku.com/tls/:/var/hyperledger/orderer/tls
+    ports:
+      - 7050:7050
+
+  peer0.hallA.hku.com:
+    container_name: peer0.hallA.hku.com
+    image: hyperledger/fabric-peer
+    dns_search: .
+    environment:
+      - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
+      - CORE_PEER_ID=peer0.hallA.hku.com
+      - CORE_LOGGING_PEER=debug
+      - CORE_LOGGING_LEVEL=DEBUG
+      - CORE_PEER_LOCALMSPID=HallAMSP
+      - CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/msp/peer/
+      - CORE_PEER_ADDRESS=peer0.hallA.hku.com:7051
+      #- CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.hallA.hku.com:7051
+      #- CORE_PEER_GOSSIP_BOOTSTRAP=peer0.hallA.hku.com:7051
+      # the following setting starts chaincode containers on the same
+      # bridge network as the peers
+      # https://docs.docker.com/compose/networking/
+      - CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=${COMPOSE_PROJECT_NAME}_hkunetwork
+      - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdbA0:5984
+      # The CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME and CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD
+      # provide the credentials for ledger to connect to CouchDB.  The username and password must
+      # match the username and password set for the associated CouchDB.
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=
+      #- CORE_LOGGING_LEVEL=ERROR
+      #- CORE_PEER_TLS_ENABLED=true
+      #- CORE_PEER_GOSSIP_USELEADERELECTION=true
+      #- CORE_PEER_GOSSIP_ORGLEADER=false
+      #- CORE_PEER_PROFILE_ENABLED=true
+      #- CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/server.crt
+      #- CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/server.key
+      #- CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt
+    volumes:
+        - /var/run/:/host/var/run/
+        - ./channel-artifacts:/etc/hyperledger/configtx
+        - ./crypto-config/peerOrganizations/hallA.hku.com/users:/etc/hyperledger/msp/users
+        - ./crypto-config/peerOrganizations/hallA.hku.com/peers/peer0.hallA.hku.com/msp:/etc/hyperledger/msp/peer
+        - ./crypto-config/peerOrganizations/hallA.hku.com/peers/peer0.hallA.hku.com/tls:/etc/hyperledger/fabric/tls
+    working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
+    command: peer node start
+    ports:
+      - 9051:7051
+      - 9053:7053
+
+  peer1.hallA.hku.com:
+    container_name: peer1.hallA.hku.com
+    image: hyperledger/fabric-peer
+    dns_search: .
+    environment:
+      - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
+      - CORE_PEER_ID=peer1.hallA.hku.com
+      - CORE_LOGGING_PEER=debug
+      - CORE_LOGGING_LEVEL=DEBUG
+      - CORE_PEER_LOCALMSPID=HallAMSP
+      - CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/msp/peer/
+      - CORE_PEER_ADDRESS=peer1.hallA.hku.com:7051
+      #- CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer1.hallA.hku.com:7051
+      #- CORE_PEER_GOSSIP_BOOTSTRAP=peer1.hallA.hku.com:7051
+      # the following setting starts chaincode containers on the same
+      # bridge network as the peers
+      # https://docs.docker.com/compose/networking/
+      - CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=${COMPOSE_PROJECT_NAME}_hkunetwork
+      - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdbA1:5984
+      # The CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME and CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD
+      # provide the credentials for ledger to connect to CouchDB.  The username and password must
+      # match the username and password set for the associated CouchDB.
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=
+      #- CORE_LOGGING_LEVEL=ERROR
+      #- CORE_PEER_TLS_ENABLED=true
+      #- CORE_PEER_GOSSIP_USELEADERELECTION=true
+      #- CORE_PEER_GOSSIP_ORGLEADER=false
+      #- CORE_PEER_PROFILE_ENABLED=true
+      #- CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/server.crt
+      #- CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/server.key
+      #- CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt
+    volumes:
+        - /var/run/:/host/var/run/
+        - ./channel-artifacts:/etc/hyperledger/configtx
+        - ./crypto-config/peerOrganizations/hallA.hku.com/users:/etc/hyperledger/msp/users
+        - ./crypto-config/peerOrganizations/hallA.hku.com/peers/peer1.hallA.hku.com/msp:/etc/hyperledger/msp/peer
+        - ./crypto-config/peerOrganizations/hallA.hku.com/peers/peer1.hallA.hku.com/tls:/etc/hyperledger/fabric/tls
+    working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
+    command: peer node start
+    ports:
+      - 10051:7051
+      - 10053:7053
+
+  peer0.hallB.hku.com:
+    container_name: peer0.hallB.hku.com
+    image: hyperledger/fabric-peer
+    dns_search: .
+    environment:
+      - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
+      - CORE_PEER_ID=peer0.hallB.hku.com
+      - CORE_LOGGING_PEER=debug
+      - CORE_LOGGING_LEVEL=DEBUG
+      - CORE_PEER_LOCALMSPID=HallBMSP
+      - CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/msp/peer/
+      - CORE_PEER_ADDRESS=peer0.hallB.hku.com:7051
+      #- CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.hallB.hku.com:7051
+      #- CORE_PEER_GOSSIP_BOOTSTRAP=peer0.hallB.hku.com:7051
+      # the following setting starts chaincode containers on the same
+      # bridge network as the peers
+      # https://docs.docker.com/compose/networking/
+      - CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=${COMPOSE_PROJECT_NAME}_hkunetwork
+      - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdbB0:5984
+      # The CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME and CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD
+      # provide the credentials for ledger to connect to CouchDB.  The username and password must
+      # match the username and password set for the associated CouchDB.
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=
+      #- CORE_LOGGING_LEVEL=ERROR
+      #- CORE_PEER_TLS_ENABLED=true
+      #- CORE_PEER_GOSSIP_USELEADERELECTION=true
+      #- CORE_PEER_GOSSIP_ORGLEADER=false
+      #- CORE_PEER_PROFILE_ENABLED=true
+      #- CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/server.crt
+      #- CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/server.key
+      #- CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt
+    volumes:
+        - /var/run/:/host/var/run/
+        - ./channel-artifacts:/etc/hyperledger/configtx
+        - ./crypto-config/peerOrganizations/hallB.hku.com/users:/etc/hyperledger/msp/users
+        - ./crypto-config/peerOrganizations/hallB.hku.com/peers/peer0.hallB.hku.com/msp:/etc/hyperledger/msp/peer
+        - ./crypto-config/peerOrganizations/hallB.hku.com/peers/peer0.hallB.hku.com/tls:/etc/hyperledger/fabric/tls
+    working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
+    command: peer node start
+    ports:
+      - 11051:7051
+      - 11053:7053
+
+  peer1.hallB.hku.com:
+    container_name: peer1.hallB.hku.com
+    image: hyperledger/fabric-peer
+    dns_search: .
+    environment:
+      - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
+      - CORE_PEER_ID=peer1.hallB.hku.com
+      - CORE_LOGGING_PEER=debug
+      - CORE_LOGGING_LEVEL=DEBUG
+      - CORE_PEER_LOCALMSPID=HallBMSP
+      - CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/msp/peer/
+      - CORE_PEER_ADDRESS=peer1.hallB.hku.com:7051
+      #- CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer1.hallB.hku.com:7051
+      #- CORE_PEER_GOSSIP_BOOTSTRAP=peer1.hallB.hku.com:7051
+      # the following setting starts chaincode containers on the same
+      # bridge network as the peers
+      # https://docs.docker.com/compose/networking/
+      - CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=${COMPOSE_PROJECT_NAME}_hkunetwork
+      - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdbB1:5984
+      # The CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME and CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD
+      # provide the credentials for ledger to connect to CouchDB.  The username and password must
+      # match the username and password set for the associated CouchDB.
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=
+      #- CORE_LOGGING_LEVEL=ERROR
+      #- CORE_PEER_TLS_ENABLED=true
+      #- CORE_PEER_GOSSIP_USELEADERELECTION=true
+      #- CORE_PEER_GOSSIP_ORGLEADER=false
+      #- CORE_PEER_PROFILE_ENABLED=true
+      #- CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/server.crt
+      #- CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/server.key
+      #- CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt
+    volumes:
+        - /var/run/:/host/var/run/
+        - ./channel-artifacts:/etc/hyperledger/configtx
+        - ./crypto-config/peerOrganizations/hallB.hku.com/users:/etc/hyperledger/msp/users
+        - ./crypto-config/peerOrganizations/hallB.hku.com/peers/peer1.hallB.hku.com/msp:/etc/hyperledger/msp/peer
+        - ./crypto-config/peerOrganizations/hallB.hku.com/peers/peer1.hallB.hku.com/tls:/etc/hyperledger/fabric/tls
+    working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
+    command: peer node start
+    ports:
+      - 12051:7051
+      - 12053:7053
+
+
+  peer0.clubA.cuhk.com:
+    container_name: peer0.clubA.cuhk.com
+    image: hyperledger/fabric-peer
+    dns_search: .
+    environment:
+      - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
+      - CORE_PEER_ID=peer0.clubA.cuhk.com
+      - CORE_LOGGING_PEER=debug
+      - CORE_LOGGING_LEVEL=DEBUG
+      - CORE_PEER_LOCALMSPID=ClubAMSP
+      - CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/msp/peer/
+      - CORE_PEER_ADDRESS=peer0.clubA.cuhk.com:7051
+      #- CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.clubA.cuhk.com:7051
+      #- CORE_PEER_GOSSIP_BOOTSTRAP=peer0.clubA.cuhk.com:7051
+      # the following setting starts chaincode containers on the same
+      # bridge network as the peers
+      # https://docs.docker.com/compose/networking/
+      - CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=${COMPOSE_PROJECT_NAME}_hkunetwork
+      - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdbA0cu:5984
+      # The CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME and CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD
+      # provide the credentials for ledger to connect to CouchDB.  The username and password must
+      # match the username and password set for the associated CouchDB.
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=
+      #- CORE_LOGGING_LEVEL=ERROR
+      #- CORE_PEER_TLS_ENABLED=true
+      #- CORE_PEER_GOSSIP_USELEADERELECTION=true
+      #- CORE_PEER_GOSSIP_ORGLEADER=false
+      #- CORE_PEER_PROFILE_ENABLED=true
+      #- CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/server.crt
+      #- CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/server.key
+      #- CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt
+    volumes:
+        - /var/run/:/host/var/run/
+        - ./channel-artifacts:/etc/hyperledger/configtx
+        - ./crypto-config/peerOrganizations/clubA.cuhk.com/users:/etc/hyperledger/msp/users
+        - ./crypto-config/peerOrganizations/clubA.cuhk.com/peers/peer0.clubA.cuhk.com/msp:/etc/hyperledger/msp/peer
+        - ./crypto-config/peerOrganizations/clubA.cuhk.com/peers/peer0.clubA.cuhk.com/tls:/etc/hyperledger/fabric/tls
+    working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
+    command: peer node start
+    ports:
+      - 13051:7051
+      - 13053:7053
+
+
+  peer0.clubB.cuhk.com:
+    container_name: peer0.clubB.cuhk.com
+    image: hyperledger/fabric-peer
+    dns_search: .
+    environment:
+      - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
+      - CORE_PEER_ID=peer0.clubB.cuhk.com
+      - CORE_LOGGING_PEER=debug
+      - CORE_LOGGING_LEVEL=DEBUG
+      - CORE_PEER_LOCALMSPID=ClubBMSP
+      - CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/msp/peer/
+      - CORE_PEER_ADDRESS=peer0.clubB.cuhk.com:7051
+      #- CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.clubB.cuhk.com:7051
+      #- CORE_PEER_GOSSIP_BOOTSTRAP=peer0.clubB.cuhk.com:7051
+      # the following setting starts chaincode containers on the same
+      # bridge network as the peers
+      # https://docs.docker.com/compose/networking/
+      - CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=${COMPOSE_PROJECT_NAME}_hkunetwork
+      - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdbB0cu:5984
+      # The CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME and CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD
+      # provide the credentials for ledger to connect to CouchDB.  The username and password must
+      # match the username and password set for the associated CouchDB.
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=
+      #- CORE_LOGGING_LEVEL=ERROR
+      #- CORE_PEER_TLS_ENABLED=true
+      #- CORE_PEER_GOSSIP_USELEADERELECTION=true
+      #- CORE_PEER_GOSSIP_ORGLEADER=false
+      #- CORE_PEER_PROFILE_ENABLED=true
+      #- CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/server.crt
+      #- CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/server.key
+      #- CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt
+    volumes:
+        - /var/run/:/host/var/run/
+        - ./channel-artifacts:/etc/hyperledger/configtx
+        - ./crypto-config/peerOrganizations/clubB.cuhk.com/users:/etc/hyperledger/msp/users
+        - ./crypto-config/peerOrganizations/clubB.cuhk.com/peers/peer0.clubB.cuhk.com/msp:/etc/hyperledger/msp/peer
+        - ./crypto-config/peerOrganizations/clubB.cuhk.com/peers/peer0.clubB.cuhk.com/tls:/etc/hyperledger/fabric/tls
+    working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
+    command: peer node start
+    ports:
+      - 14051:7051
+      - 14053:7053
