@@ -259,6 +259,10 @@ func (t *SimpleChaincode) delAC(stub shim.ChaincodeStubInterface, args []string)
 	callerName := FXAc.Owner
 	bal := FXAc.Balance
 
+	if bal != 0 {
+		return shim.Error("Failed to delete AC: balance not zero, please transfer the money to the authority first")
+	}
+
 	err = json.Unmarshal([]byte(valAsbytes), &FXAc)
 	if err != nil {
 		return shim.Error("Failed to decode JSON of: " + callerName)
@@ -277,7 +281,6 @@ func (t *SimpleChaincode) delAC(stub shim.ChaincodeStubInterface, args []string)
 		return shim.Error(err.Error())
 	}
 	userToUpdate.ACn--
-	userToUpdate.Equity -= bal
 	userJSONasBytes, _ := json.Marshal(userToUpdate)
 	err = stub.PutState(callerName, userJSONasBytes)
 	if err != nil {
