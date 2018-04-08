@@ -1,0 +1,44 @@
+Init AC simultaneously on peer0.hallA 
+	min	sec
+1:	0      1.245
+2:	0      1.012
+3:	0      0.734
+4:	0      0.832
+5:	0      0.727
+
+
+invoke is running initAC
+- start init new account
+ACi: 0
+shHash: bccfcc5f445cca5faedd01cbf459d7da9e17e1044c207b700824b097e5429034
+acNumber: 17011b53193b3ceca
+ac 17011b53193b3ceca of Alice created
+- end init account
+invoke is running initAC
+- start init new account
+ACi: 1
+shHash: 96c15ebcee6fe1713e5a6d9141bccf3db3c318f4023415f9cff5848f6f00f4db
+acNumber: 1dc01b043d05307b5
+ac 1dc01b043d05307b5 of Alice created
+- end init account
+invoke is running initAC
+- start init new account
+ACi: 2
+shHash: 5520d5c4e9ebad5fc742b63d6ec06a3aed6da08e428c8d67e3206f6c1af75e8c
+acNumber: 18e18e64b07beaff4
+ac 18e18e64b07beaff4 of Alice created
+- end init account
+invoke is running initAC
+- start init new account
+ACi: 3
+shHash: 6d5ef2adfbf785b387bb51441a4b549a2989f66da2695f226a2c08479a67e59b
+acNumber: 167dbde4991a574a8
+ac 167dbde4991a574a8 of Alice created
+- end init account
+invoke is running initAC
+- start init new account
+ACi: 4
+shHash: 307adb0734a6c525bdf4099ce44a0f4e99b23edccea21685ffa10ccfef8d2679
+acNumber: 12e74afcf24beb17e
+ac 12e74afcf24beb17e of Alice created
+- end init account

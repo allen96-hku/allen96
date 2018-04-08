@@ -54,7 +54,7 @@ Organizations:
         AdminPrincipal: Role.MEMBER
         AnchorPeers:
             - Host: peer0.hallA.hku.com
-              Port: 7051
+            - Port: 7051
 
     - &HallB
         Name: HallBMSP
@@ -63,7 +63,7 @@ Organizations:
         AdminPrincipal: Role.MEMBER
         AnchorPeers:
             - Host: peer0.hallB.hku.com
-              Port: 7051                     
+            - Port: 7051            
 
     - &ClubA
         Name: ClubAMSP

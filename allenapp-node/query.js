@@ -17,7 +17,7 @@ var os = require('os');
 var fabric_client = new Fabric_Client();
 
 // setup the fabric network
-var channel = fabric_client.newChannel('athhall');
+var channel = fabric_client.newChannel('hkuhall');
 var peer = fabric_client.newPeer('grpc://localhost:9051');
 channel.addPeer(peer);
 
@@ -54,8 +54,8 @@ Fabric_Client.newDefaultKeyValueStore({ path: store_path
 	const request = {
 		//targets : --- letting this default to the peers assigned to the channel
 		chaincodeId: 'hkucc',
-		fcn: 'readState',
-		args: ['Alice']
+		fcn: 'getHistory',
+		args: ['1Alice1234']
 	};
 
 	// send the query proposal to the peer

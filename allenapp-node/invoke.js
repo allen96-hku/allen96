@@ -17,7 +17,7 @@ var os = require('os');
 var fabric_client = new Fabric_Client();
 
 // setup the fabric network
-var channel = fabric_client.newChannel('athhall');
+var channel = fabric_client.newChannel('hkuhall');
 var peer = fabric_client.newPeer('grpc://localhost:9051');
 channel.addPeer(peer);
 var order = fabric_client.newOrderer('grpc://localhost:7050')
@@ -61,9 +61,9 @@ Fabric_Client.newDefaultKeyValueStore({ path: store_path
 	var request = {
 		//targets: let default to the peer assigned to the client
 		chaincodeId: 'hkucc',
-		fcn: 'addValue',
-		args: ['e989eab5b23c7f13', '1000'],
-		chainId: 'athhall',
+		fcn: 'initAC',
+		args: ['Alice'],
+		chainId: 'hkuhall',
 		txId: tx_id
 	};
 

@@ -1,0 +1,7 @@
+Number of Account created in Alice: 6
+12e74afcf24beb17e
+167dbde4991a574a8
+17011b53193b3ceca
+18e18e64b07beaff4
+1dc01b043d05307b5
+1ef58ead64ec0c002

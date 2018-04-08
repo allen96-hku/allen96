@@ -1,0 +1,23 @@
+[36m2018-04-03 13:08:49.399 UTC [msp] GetLocalMSP -> DEBU 001[0m Returning existing local MSP
+[36m2018-04-03 13:08:49.399 UTC [msp] GetDefaultSigningIdentity -> DEBU 002[0m Obtaining default signing identity
+2018-04-03 13:08:49.407 UTC [channelCmd] InitCmdFactory -> INFO 003[0m Endorser and orderer connections initialized
+[36m2018-04-03 13:08:49.409 UTC [msp/identity] Sign -> DEBU 004[0m Sign: plaintext: 0A91070A5C08011A0C08E1F98DD60510...EE2FD23E462C1A080A000A000A000A00 
+[36m2018-04-03 13:08:49.409 UTC [msp/identity] Sign -> DEBU 005[0m Sign: digest: 62F77E7E03E72BD2690A14B9B32C422A5400D93EBAA84DF6310B6AF562B59057 
+Error: proposal failed (err: rpc error: code = Unknown desc = chaincode error (status: 500, message: Cannot create ledger from genesis block, due to LedgerID already exists))
+Usage:
+  peer channel join [flags]
+
+Flags:
+  -b, --blockpath string   Path to file containing genesis block
+
+Global Flags:
+      --cafile string                       Path to file containing PEM-encoded trusted certificate(s) for the ordering endpoint
+      --certfile string                     Path to file containing PEM-encoded X509 public key to use for mutual TLS communication with the orderer endpoint
+      --clientauth                          Use mutual TLS when communicating with the orderer endpoint
+      --keyfile string                      Path to file containing PEM-encoded private key to use for mutual TLS communication with the orderer endpoint
+      --logging-level string                Default logging level and overrides, see core.yaml for full syntax
+  -o, --orderer string                      Ordering service endpoint
+      --ordererTLSHostnameOverride string   The hostname override to use when validating the TLS connection to the orderer.
+      --tls                                 Use TLS when communicating with the orderer endpoint
+  -v, --version                             Display current version of fabric peer server
+

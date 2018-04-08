@@ -1,32 +1,16 @@
-//Licensed to Allen Ngan
-
-// ==== CHAINCODE EXECUTION SAMPLES (CLI) ==================
-// ==== Query ====
-/*
-
- */
-
-// ==== Rich Query ====
-/*
-
- */
-
-// ==== Invoke ====
-/*
-
- */
-
 package main
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"hash/fnv"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
-	"unicode/utf8"
 
 	"github.com/hyperledger/fabric/core/chaincode/shim"
 	pb "github.com/hyperledger/fabric/protos/peer"
@@ -49,12 +33,12 @@ type account struct {
 type user struct {
 	ObjectType string  `json:"docType"` //docType is used to distinguish the various types of objects in state database
 	Name       string  `json:"Name"`
-	ACi        int     `json:"ACi"`    // Account Index
-	ACnDel     int     `json:"ACnDel"` // Number of account deleted
+	ACi        int     `json:"ACi"` // Account Index
+	ACn        int     `json:"ACn"` // Number of account deleted
 	Equity     float64 `json:"Equity"`
 }
 
-// {"ACi":0,"ACnDel":0,"Equity":0,"Name":"Admin@hallA.hku.com","docType":"user"}
+// {"ACi":0,"ACn":0,"Equity":0,"Name":"Admin@hallA.hku.com","docType":"user"}
 
 // Main
 func main() {
@@ -67,10 +51,10 @@ func main() {
 // Init - initializes chaincode
 // ===========================
 func (t *SimpleChaincode) Init(stub shim.ChaincodeStubInterface) pb.Response {
-	objectType := "ac"
+	objectType := "system"
 	acNumber := "SystemAC"
 	owner := "System"
-	balance := 100000.00
+	balance := 100000000000000000.00
 	nonce := 0
 	ac := &account{objectType, acNumber, owner, balance, nonce}
 	acJSONasBytes, err := json.Marshal(ac)
@@ -98,8 +82,6 @@ func (t *SimpleChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 		return t.initUser(stub, args)
 	} else if function == "initAC" { //create a new account
 		return t.initAC(stub, args)
-	} else if function == "readState" {
-		return t.readState(stub, args)
 	} else if function == "delAC" {
 		return t.delAC(stub, args)
 	} else if function == "delUser" {
@@ -110,34 +92,12 @@ func (t *SimpleChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 		return t.addValue(stub, args)
 	} else if function == "getHistory" {
 		return t.getHistory(stub, args)
-	} else if function == "getAllUser" {
-		return t.getAllUser(stub, args)
+	} else if function == "getQueryfromString" {
+		return t.getQueryfromString(stub, args)
 	}
 
 	fmt.Println("invoke did not find func: " + function) //error
 	return shim.Error("Received unknown function invocation")
-}
-
-//////////////////////////////////////////////////////////////////////
-///////////////////////// Development Function //////////////////////
-//////////////////////////////////////////////////////////////////////
-func BytesToString(data []byte) string {
-	return string(data[:])
-}
-
-func ObtainFieldfromBytes(valAsbytes []byte, field string) string {
-	valAsString := BytesToString(valAsbytes)
-	startIndex := strings.Index(valAsString, field) + utf8.RuneCountInString(field) + 2
-	if startIndex == -1 {
-		fmt.Errorf("No such field")
-	}
-
-	endIndex := strings.Index(valAsString[startIndex:], ",\"") + startIndex
-	if endIndex == -1 {
-		endIndex := strings.Index(valAsString, "}")
-		return valAsString[startIndex:endIndex]
-	}
-	return valAsString[startIndex:endIndex]
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -147,16 +107,26 @@ func ObtainFieldfromBytes(valAsbytes []byte, field string) string {
 func (t *SimpleChaincode) initUser(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 	var err error
 
+	// ==== Input Validation ====
+	// Username: 1) Length = 1~62 2) only contain alphabetical value 3) The first character cannot be a number
+	fmt.Println("- start init new user")
+
 	if len(args) != 1 {
 		return shim.Error("Incorrect number of argument, expecting 1.")
 	}
 
-	// ==== Input sanitation ====
-	fmt.Println("- start init new user")
+	if len(args[0]) > 64 || len(args[0]) < 1 {
+		return shim.Error("Username is restricted with length 1~64")
+	} else if regexp.MustCompile(`^[a-zA-Z0-9]+$`).MatchString(args[0]) == false {
+		return shim.Error("Username can only contain alphabetical or numerical characters.")
+	} else if regexp.MustCompile(`^[0-9]+$`).MatchString(string(args[0][0])) == true {
+		return shim.Error("Username can not start with number.")
+	}
 
 	aci := 0
-	acndel := 0
+	acn := 0
 	equity := 0.00
+
 	callerName := args[0]
 
 	// ==== Check if user already exists ====
@@ -170,7 +140,7 @@ func (t *SimpleChaincode) initUser(stub shim.ChaincodeStubInterface, args []stri
 
 	// ==== Create user object and marshal to JSON ====
 	objectType := "user"
-	user := &user{objectType, callerName, aci, acndel, equity}
+	user := &user{objectType, callerName, aci, acn, equity}
 	userJSONasBytes, err := json.Marshal(user)
 	if err != nil {
 		return shim.Error(err.Error())
@@ -188,16 +158,8 @@ func (t *SimpleChaincode) initUser(stub shim.ChaincodeStubInterface, args []stri
 	fmt.Println("- end init user")
 
 	return shim.Success(nil)
-
 }
 
-/*
-ObjectType string  `json:"docType"` //docType is used to distinguish the various types of objects in state database
-	ACNumber   string  `json:"ACNumber"`
-	Owner      string  `json:"Owner"`
-	Balance    float64 `json:"Balance"`
-	Nonce      int     `json:"Nonce"`
-*/
 func (t *SimpleChaincode) initAC(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 	var err error
 
@@ -222,25 +184,24 @@ func (t *SimpleChaincode) initAC(stub shim.ChaincodeStubInterface, args []string
 	}
 
 	//Create Account Number
-	acNumberHashUpper := fnv.New32()
-	acNumberHashLower := fnv.New32()
+	FXUser, err := getUser(stub, callerName)
+	if err != nil {
+		shim.Error("Error in obtaining user")
+	}
+	aci := FXUser.ACi
+	fmt.Printf("ACi: %v\n", aci)
 
-	acNumberHashLower.Write([]byte(callerName))
-	fmt.Printf("CallerName Hash: %08x\n", acNumberHashLower.Sum32())
-
-	//Obtain user's ACn
-	userAsString := BytesToString(userAsbyte)
-	fmt.Println("Converted to string: " + userAsString)
-	aci := fmt.Sprintf("%04s", ObtainFieldfromBytes(userAsbyte, "ACi"))
-	fmt.Println("ACi: " + aci)
-	acNumberHashUpper.Write([]byte(aci))
-	fmt.Printf("ACi Hash: %08x\n", acNumberHashUpper.Sum32())
-	acNumber := fmt.Sprintf("%08x%08x", acNumberHashUpper.Sum32(), acNumberHashLower.Sum32())
-	fmt.Println("acNumber: " + acNumber)
+	sh := sha256.New()
+	sh.Write([]byte(fmt.Sprintf("%v%s", aci, callerName)))
+	fmt.Printf("shHash: %s\n", fmt.Sprintf("%x", sh.Sum(nil)))
+	fn := fnv.New64a()
+	fn.Write([]byte(sh.Sum(nil)))
+	acNumber := fmt.Sprintf("1%016x", fn.Sum64())
+	fmt.Printf("acNumber: %s\n", acNumber)
 
 	// ==== Create ac object and marshal to JSON ====
 
-	objectType := "ac"
+	objectType := "account"
 	ac := &account{objectType, acNumber, callerName, balance, nonce}
 	acJSONasBytes, err := json.Marshal(ac)
 	if err != nil {
@@ -260,13 +221,14 @@ func (t *SimpleChaincode) initAC(stub shim.ChaincodeStubInterface, args []string
 		return shim.Error(err.Error())
 	}
 	userToUpdate.ACi++
+	userToUpdate.ACn++
 	userJSONasBytes, _ := json.Marshal(userToUpdate)
 	err = stub.PutState(callerName, userJSONasBytes)
 	if err != nil {
 		return shim.Error(err.Error())
 	}
 
-	fmt.Println("ac " + acNumber + " from " + callerName + " created")
+	fmt.Println("ac " + acNumber + " of " + callerName + " created")
 
 	// ==== User saved. Return success ====
 
@@ -275,28 +237,7 @@ func (t *SimpleChaincode) initAC(stub shim.ChaincodeStubInterface, args []string
 	return shim.Success(nil)
 }
 
-func (t *SimpleChaincode) readState(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	var name string
-	var err error
-
-	if len(args) != 1 {
-		return shim.Error("Incorrect number of arguments. Expecting username/acnumber")
-	}
-
-	name = args[0]
-	valAsbytes, err := stub.GetState(name) //get the user from chaincode state
-	if err != nil {
-		return shim.Error("Failed to get state for " + name)
-	} else if valAsbytes == nil {
-		return shim.Error("User/Account does not exist: " + name)
-	}
-
-	fmt.Println(BytesToString(valAsbytes))
-	return shim.Success(valAsbytes)
-}
-
 func (t *SimpleChaincode) delAC(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	var acJSON account
 	if len(args) != 1 {
 		return shim.Error("Incorrect number of argument, expecting 1.")
 	}
@@ -311,25 +252,31 @@ func (t *SimpleChaincode) delAC(stub shim.ChaincodeStubInterface, args []string)
 	}
 
 	// Obtain AC Balance
-	err = json.Unmarshal([]byte(valAsbytes), &acJSON)
+	FXAc, err := getAC(stub, ACnumber)
 	if err != nil {
-		return shim.Error("Failed to decode JSON of: " + ACnumber)
+		shim.Error("Error in obtaining AC")
 	}
-	callerName := acJSON.Owner
-	bal := acJSON.Balance
+	callerName := FXAc.Owner
+	bal := FXAc.Balance
+
+	err = json.Unmarshal([]byte(valAsbytes), &FXAc)
+	if err != nil {
+		return shim.Error("Failed to decode JSON of: " + callerName)
+	}
+
 	err = stub.DelState(ACnumber) //remove the marble from chaincode state
 	if err != nil {
 		return shim.Error("Failed to delete state:" + err.Error())
 	}
 
-	//update user ACndel
+	//update user ACn
 	userAsbytes, err := stub.GetState(callerName)
 	userToUpdate := user{}
 	err = json.Unmarshal(userAsbytes, &userToUpdate)
 	if err != nil {
 		return shim.Error(err.Error())
 	}
-	userToUpdate.ACnDel++
+	userToUpdate.ACn--
 	userToUpdate.Equity -= bal
 	userJSONasBytes, _ := json.Marshal(userToUpdate)
 	err = stub.PutState(callerName, userJSONasBytes)
@@ -343,53 +290,37 @@ func (t *SimpleChaincode) delAC(stub shim.ChaincodeStubInterface, args []string)
 }
 
 func (t *SimpleChaincode) delUser(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	var jsonResp string
-	var userJSON user
 	if len(args) != 1 {
 		return shim.Error("Incorrect number of argument, expecting 1.")
 	}
 
-	//get creator name
+	//get user name
 	callerName := args[0]
 
 	//check if the user has created
 	valAsbytes, err := stub.GetState(callerName)
 	if err != nil {
-		jsonResp = "{\"Error\":\"Failed to get state for " + callerName + "\"}"
-		return shim.Error(jsonResp)
+		return shim.Error("Failed to get state for " + callerName)
 	} else if valAsbytes == nil {
-		jsonResp = "{\"Error\":\"User does not exist in the system: " + callerName + "\"}"
-		return shim.Error(jsonResp)
+		return shim.Error("User does not exist in the system: " + callerName)
 	}
 
 	//Check if there are ac remaining belongs to the caller
-	userAsString := BytesToString(valAsbytes)
-	fmt.Println("Converted to string: " + userAsString)
-
-	aciStart := strings.Index(userAsString, "ACi") + 5
-	aciEnd := strings.Index(userAsString, ",\"ACn")
-	fmt.Println("aci in string: " + userAsString[aciStart:aciEnd])
-	aci, err := strconv.Atoi(userAsString[aciStart:aciEnd])
-
-	acndelStart := strings.Index(userAsString, "ACnDel") + 8
-	acndelEnd := strings.Index(userAsString, ",\"Equi")
-	fmt.Println("acndel in string: " + userAsString[acndelStart:acndelEnd])
-	acndel, err := strconv.Atoi(userAsString[acndelStart:acndelEnd])
-
+	FXUser, err := getUser(stub, callerName)
 	if err != nil {
-		return shim.Error("Error to obtain ACi/ACndel")
+		shim.Error("Error in obtaining user")
 	}
+	acn := FXUser.ACn
 
-	if (aci - acndel) != 0 {
+	if acn != 0 {
 		fmt.Println("Number of ac of this user not zero, please run delUser first")
 		return shim.Error("Number of ac of this user not zero, please run delUser first")
 	}
 
 	// Unmarshal
-	err = json.Unmarshal([]byte(valAsbytes), &userJSON)
+	err = json.Unmarshal([]byte(valAsbytes), &FXUser)
 	if err != nil {
-		jsonResp = "{\"Error\":\"Failed to decode JSON of: " + callerName + "\"}"
-		return shim.Error(jsonResp)
+		return shim.Error("Failed to decode JSON of: " + callerName)
 	}
 
 	err = stub.DelState(callerName) //remove the user from chaincode state
@@ -439,13 +370,10 @@ func (t *SimpleChaincode) pay(stub shim.ChaincodeStubInterface, args []string) p
 	}
 
 	// Check if sender account balance has enough money
-	senderACAsString := BytesToString(sendACAsbytes)
-	balStart := strings.Index(senderACAsString, "Balance") + 9
-	balEnd := strings.Index(senderACAsString, ",\"Nonce")
-	bal, err := strconv.ParseFloat(senderACAsString[balStart:balEnd], 64)
+	FXAc, err := getAC(stub, senderAC)
 	if err != nil {
-		return shim.Error("Error to obtain balance")
-	} else if amount > bal {
+		shim.Error("Error in obtaining ac")
+	} else if amount > FXAc.Balance {
 		return shim.Error("Sender account does not have sufficient money")
 	}
 
@@ -455,12 +383,7 @@ func (t *SimpleChaincode) pay(stub shim.ChaincodeStubInterface, args []string) p
 		return shim.Error("Expecting Integral value of TX Nonce")
 	}
 	// Check if sender ACnonce match TXnonce
-	nonceStart := strings.Index(senderACAsString, "Nonce") + 7
-	nonceEnd := strings.Index(senderACAsString, ",\"Owner")
-	nonce, err := strconv.Atoi(senderACAsString[nonceStart:nonceEnd])
-	if err != nil {
-		return shim.Error("Error to obtain Nonce value")
-	} else if txNonce != nonce {
+	if txNonce != FXAc.Nonce {
 		fmt.Println("Sender account nonce mismatch with tx nonce")
 		return shim.Error("Sender account nonce mismatch with tx nonce")
 	}
@@ -657,15 +580,38 @@ func (t *SimpleChaincode) getHistory(stub shim.ChaincodeStubInterface, args []st
 
 }
 
-func (t *SimpleChaincode) getAllUser(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+func (t *SimpleChaincode) getQueryfromString(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 
-	//   0
-	// "bob"
-	if len(args) < 0 {
-		return shim.Error("Incorrect number of arguments. Expecting 0")
+	//		0			1
+	//		key			value
+	//		docType		user
+
+	if len(args)%2 != 0 || len(args) < 2 {
+		return shim.Error("Incorrect number of arguments. Expecting number of arguments of even number larger than 1")
 	}
 
-	queryString := "{\"selector\":{\"docType\":\"user\"}}"
+	var queryString string
+	var index int
+	var substr string
+	if isStringField(args[0]) {
+		queryString = "{\"selector\":{\"" + args[0] + "\":\"" + args[1] + "\"}}"
+	} else {
+		queryString = "{\"selector\":{\"" + args[0] + "\":" + args[1] + "}}"
+	}
+
+	if len(args) > 2 {
+		for i := 2; i < len(args); i += 2 {
+			index = len(queryString) - 2
+			if isStringField(args[i]) == false {
+				substr = ",\"" + args[i] + "\":" + args[i+1]
+			} else {
+				substr = ",\"" + args[i] + "\":\"" + args[i+1] + "\""
+			}
+			queryString = queryString[:index] + substr + queryString[index:]
+		}
+	}
+
+	fmt.Println(queryString)
 
 	queryResults, err := getQueryResultForQueryString(stub, queryString)
 	if err != nil {
@@ -673,6 +619,10 @@ func (t *SimpleChaincode) getAllUser(stub shim.ChaincodeStubInterface, args []st
 	}
 	return shim.Success(queryResults)
 }
+
+//////////////////////////////////////////////////////////////////////
+///////////////////////// Developer Functions ////////////////////////
+//////////////////////////////////////////////////////////////////////
 
 func getQueryResultForQueryString(stub shim.ChaincodeStubInterface, queryString string) ([]byte, error) {
 
@@ -714,4 +664,44 @@ func getQueryResultForQueryString(stub shim.ChaincodeStubInterface, queryString 
 	fmt.Printf("- getQueryResultForQueryString queryResult:\n%s\n", buffer.String())
 
 	return buffer.Bytes(), nil
+}
+
+func getAC(stub shim.ChaincodeStubInterface, key string) (account, error) {
+	var ac account
+	acAsBytes, err := stub.GetState(key) //getState retreives a key/value from the ledger
+	if err != nil {                      //this seems to always succeed, even if key didn't exist
+		return ac, errors.New("Failed to find account - " + key)
+	}
+	json.Unmarshal(acAsBytes, &ac) //un stringify it aka JSON.parse()
+
+	if ac.ACNumber != key { //test if marble is actually here or just nil
+		return ac, errors.New("Account does not exist - " + key)
+	}
+
+	return ac, nil
+}
+
+func getUser(stub shim.ChaincodeStubInterface, key string) (user, error) {
+	var userObj user
+	userAsbyte, err := stub.GetState(key) //getState retreives a key/value from the ledger
+	if err != nil {                       //this seems to always succeed, even if key didn't exist
+		return userObj, errors.New("Failed to find user - " + key)
+	}
+	json.Unmarshal(userAsbyte, &userObj) //un stringify it aka JSON.parse()
+
+	if userObj.Name != key { //test if marble is actually here or just nil
+		return userObj, errors.New("User does not exist - " + key)
+	}
+
+	return userObj, nil
+}
+
+func isStringField(field string) bool {
+	a := []string{"ACi", "ACn", "Equity", "Balance", "Nonce"}
+	for i := 0; i < len(a); i++ {
+		if strings.Compare(field, a[i]) == 0 {
+			return false
+		}
+	}
+	return true
 }

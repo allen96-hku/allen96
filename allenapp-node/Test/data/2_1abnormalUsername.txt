@@ -1,0 +1,13 @@
+Create user with abnormal username
+
+Space Start     ( Alice)              :Error
+Space End       (Alice )              :Error
+Contain Space   (Alice )              :Error
+Number Start    (2Alice)              :Error
+Contain symbol  (_Alice)              :Error
+Contain symbol  (,...&)               :Error
+Contain symbol  (./Z~.,sd)            :Error
+Contain symbol  (?][{\e_+;.<?)        :Error
+Contain symbol  ($A%^(\ne)            :Error
+Contain symbol  (,!Alic!@#$%^&*()-=e) :Error
+Correct input   (Dicky)               :Correct!
